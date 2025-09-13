@@ -1,0 +1,62 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+nc-fttx-portal
+bin/
+dist/
+
+# Go
+*.out
+vendor/
+go.work
+
+# Environment and secrets
+.env
+.env.local
+*.pem
+*.key
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+
+# Application data
+*.db
+*.sqlite
+data/
+logs/
+
+# CI/CD artifacts
+coverage.out
+*.log
+test-results/
+security-reports/
+
+# Helm
+charts/*.tgz
+
+# Temporary files
+tmp/
+temp/
