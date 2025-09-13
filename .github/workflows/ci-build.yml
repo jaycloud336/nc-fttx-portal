@@ -45,11 +45,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: ./application
-<<<<<<< HEAD
         file: ./infrastructure/docker/Dockerfile
-=======
-        file: ./infrastructure/docker/multi-stage.Dockerfile
->>>>>>> dda8d18c93d9e33e497c217337639724f4653a3f
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
