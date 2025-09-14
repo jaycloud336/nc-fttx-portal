@@ -158,4 +158,4 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "# TYPE nc_fttx_http_requests_total counter\n")
 	fmt.Fprintf(w, "nc_fttx_http_requests_total{method=\"GET\",endpoint=\"/\"} 1\n")
 }
-# Updated
+
