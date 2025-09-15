@@ -1,0 +1,32 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: './application'
+        format: 'table'
+
+    - name: Build Docker image for scanning
+      run: |
+        docker build -f infrastructure/docker/Dockerfile -t nc-fttx-portal:scan ./application
+
+    - name: Run Trivy container scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'nc-fttx-portal:scan'
+        format: 'table'
