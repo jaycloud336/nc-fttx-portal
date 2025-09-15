@@ -31,8 +31,24 @@ jobs:
         image-ref: 'nc-fttx-portal:scan'
         format: 'table'
 
+    - name: Start application for DAST
+      run: |
+        docker run -d -p 8080:8080 --name test-app nc-fttx-portal:scan
+        sleep 30
+
+    - name: Run OWASP ZAP baseline scan
+      id: zap-scan
+      uses: zaproxy/action-baseline@v0.10.0
+      with:
+        target: 'http://localhost:8080'
+      continue-on-error: true
+
+    - name: Cleanup test container
+      if: always()
+      run: docker rm -f test-app
+
     - name: Notify Slack on security issues
-      if: failure()
+      if: failure() || steps.zap-scan.outcome == 'failure'
       uses: 8398a7/action-slack@v3
       with:
         status: failure
