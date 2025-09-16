@@ -9,6 +9,10 @@ on:
 jobs:
   security-scan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write        
+      security-events: write
     
     steps:
     - name: Checkout code
