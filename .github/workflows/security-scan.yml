@@ -45,6 +45,7 @@ jobs:
       uses: zaproxy/action-baseline@v0.10.0
       with:
         target: 'http://localhost:8080'
+        artifact_name: 'zap-baseline-report'  # custom report
       continue-on-error: true
 
     - name: Cleanup test container
