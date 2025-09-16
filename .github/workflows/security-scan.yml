@@ -46,7 +46,7 @@ jobs:
       uses: zaproxy/action-baseline@v0.13.0
       with:
         target: 'http://localhost:8080'
-        create_issue: false   
+        allow_issue_writing: false
       continue-on-error: true
 
     - name: Cleanup test container
