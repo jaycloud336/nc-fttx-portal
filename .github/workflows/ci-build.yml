@@ -11,6 +11,8 @@ on:
 env:
   REGISTRY: docker.io
   IMAGE_NAME: nc-fttx-portal
+  GITOPS_REPO_PATH: 'nc-fttx-portal-gitops'
+  DEPLOYMENT_MANIFEST_PATH: 'manifests/deployment.yaml'
 
 jobs:
   build-and-push:
@@ -60,3 +62,51 @@ jobs:
         curl -f http://localhost:8080/health || exit 1
         docker stop test-container
         docker rm test-container
+
+  # Referencing the Deployment Pipeline
+  update-manifest:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout GitOps repository
+      uses: actions/checkout@v4
+      with:
+        repository: jaycloud336/nc-fttx-portal-gitops
+        path: ${{ env.GITOPS_REPO_PATH }}
+        token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+    - name: Update image tag in deployment manifest
+      run: |
+        cd ${{ env.GITOPS_REPO_PATH }}
+        
+        # Verify the manifest file exists
+        if [ ! -f "${{ env.DEPLOYMENT_MANIFEST_PATH }}" ]; then
+          echo "Error: Deployment manifest not found at ${{ env.DEPLOYMENT_MANIFEST_PATH }}"
+          exit 1
+        fi
+        
+        # Use the latest tag for the new image
+        NEW_TAG="${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest"
+        
+        echo "Updating image to: $NEW_TAG"
+        
+        # Update the image tag in the deployment manifest
+        sed -i 's|image: .*/nc-fttx-portal:.*|image: '"$NEW_TAG"'|g' ${{ env.DEPLOYMENT_MANIFEST_PATH }}
+        
+        # Verify the change was made
+        if ! grep -q "$NEW_TAG" ${{ env.DEPLOYMENT_MANIFEST_PATH }}; then
+          echo "Error: Failed to update image tag in manifest"
+          exit 1
+        fi
+        
+        echo "Successfully updated image tag to: $NEW_TAG"
+
+    - name: Commit and push changes
+      uses: EndBug/add-and-commit@v9
+      with:
+        message: 'chore: update application image to latest version [skip ci]'
+        cwd: ${{ env.GITOPS_REPO_PATH }}
+        add: '${{ env.DEPLOYMENT_MANIFEST_PATH }}'
+        default_author: github_actions
