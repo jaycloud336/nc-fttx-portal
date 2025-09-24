@@ -117,7 +117,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		Municipalities []Municipality
 		TotalCount     int
 	}{
-		Title:          "North Carolina FTTX Permitting Portal",
+		Title:          "NC FTTX Permitting Portal",
 		Municipalities: municipalities,
 		TotalCount:     len(municipalities),
 	}
