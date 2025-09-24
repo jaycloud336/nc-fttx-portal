@@ -113,11 +113,11 @@ func main() {
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	data := struct {
-		Title           string
-		Municipalities  []Municipality
-		TotalCount      int
+		Title          string
+		Municipalities []Municipality
+		TotalCount     int
 	}{
-		Title:          "NC FTTX Permitting Portal",
+		Title:          "North Carolina FTTX Permitting Portal",
 		Municipalities: municipalities,
 		TotalCount:     len(municipalities),
 	}
@@ -153,9 +153,8 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "# HELP nc_fttx_municipalities_total Total number of municipalities\n")
 	fmt.Fprintf(w, "# TYPE nc_fttx_municipalities_total gauge\n")
 	fmt.Fprintf(w, "nc_fttx_municipalities_total %d\n", len(municipalities))
-	
+
 	fmt.Fprintf(w, "# HELP nc_fttx_http_requests_total Total HTTP requests\n")
 	fmt.Fprintf(w, "# TYPE nc_fttx_http_requests_total counter\n")
 	fmt.Fprintf(w, "nc_fttx_http_requests_total{method=\"GET\",endpoint=\"/\"} 1\n")
 }
-
