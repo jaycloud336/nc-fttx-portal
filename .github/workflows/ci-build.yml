@@ -3,7 +3,9 @@ name: CI Build and Push
 on:
   push:
     branches: [main, develop]
-    paths: ['application/**']
+    paths: 
+      - 'application/**'
+      - 'infrastructure/docker/Dockerfile'
   pull_request:
     branches: [main]
     paths: ['application/**']
