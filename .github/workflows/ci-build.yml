@@ -77,7 +77,7 @@ jobs:
         path: ${{ env.GITOPS_REPO_PATH }}
         token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
-    - name: Update image tag in deployment manifest
+    - name: Update image tag in deployment manifest    # ← UPDATED STEP
       run: |
         cd ${{ env.GITOPS_REPO_PATH }}
         
@@ -87,8 +87,8 @@ jobs:
           exit 1
         fi
         
-        # Use the latest tag for the new image
-        NEW_TAG="${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest"
+        # Use the SHA tag for traceability              # ← NEW CODE (using SHA)
+        NEW_TAG="${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}"
         
         echo "Updating image to: $NEW_TAG"
         
@@ -103,10 +103,10 @@ jobs:
         
         echo "Successfully updated image tag to: $NEW_TAG"
 
-    - name: Commit and push changes
+    - name: Commit and push changes                    # ← UPDATED STEP
       uses: EndBug/add-and-commit@v9
       with:
-        message: 'chore: update application image to latest version [skip ci]'
+        message: 'chore: update application image to sha-${{ github.sha }} [skip ci]'  # ← NEW MESSAGE
         cwd: ${{ env.GITOPS_REPO_PATH }}
         add: '${{ env.DEPLOYMENT_MANIFEST_PATH }}'
         default_author: github_actions
