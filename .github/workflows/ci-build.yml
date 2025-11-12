@@ -92,8 +92,10 @@ jobs:
         fi
         
         # Use the SHA tag for traceability              # ← NEW CODE (using SHA)
-        NEW_TAG="${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}"
-        
+        # Use SHORT SHA (first 7 characters) to match Docker tags
+        SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+        NEW_TAG="${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:sha-${SHORT_SHA}"
+
         echo "Updating image to: $NEW_TAG"
         
         # Update the image tag in the deployment manifest

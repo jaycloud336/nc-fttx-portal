@@ -106,7 +106,7 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("🚀 NC FTTX Portal starting on port %s", port)
+	log.Printf("🚀 N.C. FTTX Portal starting on port %s", port)
 	log.Printf("🌐 Access at: http://localhost:%s", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
