@@ -1,6 +1,8 @@
 # STAGE 1: BUILD
 # Go compiler with Alpine base
-FROM golang:1.23-alpine AS builder         
+FROM golang:1.23-alpine AS builder
+# Cache buster - change this number to force fresh build
+ARG CACHEBUST=1
 # Set build directory
 WORKDIR /app                               
 # Copy source code
