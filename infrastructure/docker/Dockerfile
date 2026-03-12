@@ -1,16 +1,20 @@
 # STAGE 1: BUILD
 # Go compiler with Alpine base
-FROM golang:1.23-alpine AS builder         
+FROM golang:1.24-alpine AS builder         
 # Set build directory
-WORKDIR /app                               
+WORKDIR /app          
+# Copy dependency files
+COPY go.mod go.sum ./
+RUN go mod download
 # Copy source code
-COPY . .                                   
+COPY . .                                             
 # Compile Go binary
-RUN go build -o app main.go                
-
+RUN CGO_ENABLED=0 GOOS=linux go build -o app main.go
 # STAGE 2: RUN
 # Minimal runtime image
-FROM alpine:latest                         
+FROM alpine:latest
+# Patching OS-level vulnerabilities
+RUN apk update && apk upgrade --no-cache
 # Set runtime directory
 WORKDIR /app                               
 # Copy binary from builder
