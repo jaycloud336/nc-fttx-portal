@@ -1,3 +1,4 @@
+// Test: SAST Trigger
 package main
 
 import (

@@ -9,6 +9,7 @@ on:
   pull_request:
     branches: [main]
     paths: ['application/**']
+  workflow_dispatch: # Temporary human in the loop manual verifiaction while testing
 
 env:
   REGISTRY: docker.io
