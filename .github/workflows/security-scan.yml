@@ -64,10 +64,6 @@ jobs:
       if: always()
       run: docker rm -f test-app
 
-    - name: Cleanup test container
-      if: always()
-      run: docker rm -f test-app
-
     - name: Notify Slack on security issues
       if: failure() || steps.zap-scan.outcome == 'failure'
       uses: 8398a7/action-slack@v3
