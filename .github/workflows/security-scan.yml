@@ -49,6 +49,7 @@ jobs:
       with:
         target: 'http://localhost:8080'
         allow_issue_writing: false
+        artifact_name: zap-scan-report
       continue-on-error: true
 
     - name: Upload ZAP Report
