@@ -35,6 +35,8 @@ jobs:
       with:
         image-ref: 'nc-fttx-portal:scan'
         format: 'table'
+        exit-code: '1'
+        severity: 'CRITICAL'
 
     - name: Start application for DAST
       run: |
