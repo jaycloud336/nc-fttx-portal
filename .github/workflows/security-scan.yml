@@ -51,6 +51,19 @@ jobs:
         allow_issue_writing: false
       continue-on-error: true
 
+    - name: Upload ZAP Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: zap-scan-report
+        path: |
+          report_html.html
+          report_md.md
+
+    - name: Cleanup test container
+      if: always()
+      run: docker rm -f test-app
+
     - name: Cleanup test container
       if: always()
       run: docker rm -f test-app
