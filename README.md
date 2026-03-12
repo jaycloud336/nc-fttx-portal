@@ -12,8 +12,6 @@ It can be located here:*
 *The `nc-fttx-portal-gitops` repository handles the Continuous Deployment process. Once the image is pushed to Docker Hub, ArgoCD will detect the new image tag and automatically synchronize the Kubernetes cluster state. All of tke K8 & ArgoCD manifest files are located
 in the Continuous Deployment repository.*
 
-![NC FTTX Portal CI Workflow](./Overview.png)
-
 ### Major DevOps Components for artifact management:
 
 **Artifact Hardening:** Utilizes multi-stage builds to reduce image size, create minimal Go binaries and reduce overall attack surface.
