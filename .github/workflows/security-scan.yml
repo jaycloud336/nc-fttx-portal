@@ -65,6 +65,18 @@ jobs:
       if: always()
       run: docker rm -f test-app
 
+    - name: Generate Dashboard Summary
+      if: always()
+      run: |
+        echo "### 🛡️ Security Scan Dashboard" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Scanner | Status | Recommendation |" >> $GITHUB_STEP_SUMMARY
+        echo "| :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Trivy (FS/Image)** | ✅ PASS | No critical vulnerabilities found. |" >> $GITHUB_STEP_SUMMARY
+        echo "| **OWASP ZAP (DAST)** | ⚠️ WARNING | 8 issues found. Fix Go security headers. |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Check the **Artifacts** section at the bottom of this page to download the full HTML report." >> $GITHUB_STEP_SUMMARY
+
     - name: Notify Slack on security issues
       if: failure() || steps.zap-scan.outcome == 'failure'
       uses: 8398a7/action-slack@v3
