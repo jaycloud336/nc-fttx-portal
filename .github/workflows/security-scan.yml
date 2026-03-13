@@ -51,6 +51,8 @@ jobs:
         allow_issue_writing: false
         artifact_name: zap-scan-report
       continue-on-error: true
+      env:
+        SLACK_WEBHOOK_URL: ""
 
     - name: Upload ZAP Report
       if: always()
