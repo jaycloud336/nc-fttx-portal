@@ -39,6 +39,8 @@ Decoupling the Security Scanning from the Build/Deploy workflows allows for a fu
 
 **Developer (Push)** ➡️ **GitHub Actions (Security Scan)**
 
+![alt text](assets/architecture-security-scan1.png)
+
 **Phase 1: Security Pipeline (Testing/Validation)**
 
 1. SAST: Trivy File Scan ➡️
