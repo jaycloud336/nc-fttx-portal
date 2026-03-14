@@ -1,120 +1,109 @@
-## CI/CD Pipeline (GitHub Actions)
+# CI/CD Pipeline & Security Automation Overview
 
-The project includes a fully automated CI pipeline located in `.github/workflows/ci.yaml`. This workflow ensures that every code change is validated and containerized before being deployed to the cluster.
-
-### Key Pipeline Stages:
-
-* **Security Scan**: Scans the Docker image for known vulnerabilities (CVEs) using Trivy.
-* **Build & Push**: Compiles the Go application and pushes a tagged image to Docker Hub using the Git SHA for version immutability.
-* **Slack Notification(Optional)**: Sends real-time build status updates to a designated Slack channel.
-
+This document provides a technical breakdown of the fully automated CI pipeline located in `.github/workflows/security-scan.yaml`. This workflow ensures that every code change is validated using a "Shift-Left" security approach before being containerized.
 
 ---
 
-### To use this pipeline in your own forked or cloned Github repo you must have:
+## Prerequisites for Use
 
--Docker
--Dockerhub Account
--Slack Account(Optional)
+To execute this pipeline in a forked or cloned repository, the following dependencies are required:
 
-## Establish Secrets/Credentials**
+- **Docker**
+- **Docker Hub Account**
+- **Slack Account** *(Optional for notifications)*
 
-Docker Hub Website 
-**Create Access Token:**
-   - Go to Account Settings > Security
-   - Click "New Access Token"
-   - Name: `github-actions-nc-fttx`
-   - Permissions: Read, Write, Delete
-   - Copy the token (save it securely) *Example:*dckr_pat_<YOUR_TOKEN_HERE>*
+---
 
+## Establish Secrets & Credentials
 
-**Configure Secrets**: In your GitHub Repository, navigate to **Settings > Secrets and variables > Actions** and add the following:
-    * `DOCKERHUB_USERNAME`: Your Docker Hub ID.
-    * `DOCKERHUB_TOKEN`: A Personal Access Token (PAT) generated from your Docker Hub account.
+To enable the automated push and notification features, navigate to **Settings > Secrets and variables > Actions** in your GitHub repository and configure the following:
 
-**Slack (Optional - Create Webhook):**
-   - Create a Slack App in your workspace.
-   - Enable **"Incoming Webhooks"** and create a new Webhook to a specific channel.
-   - Copy the Webhook URL (starts with `https://hooks.slack.com/...`).
+1. **Docker Hub Credentials**:
+   - `DOCKERHUB_USERNAME`: Your Docker Hub ID.
+   - `DOCKERHUB_TOKEN`: A Personal Access Token (PAT) generated from Docker Hub (*Account Settings > Security > New Access Token*).
 
+2. **Slack Integration (Optional)**:
+   - `SLACK_WEBHOOK_URL`: The webhook URL generated from a custom Slack App with "Incoming Webhooks" enabled.
 
+---
 
-**Modify the Image Name**: Update the `tags:` section in the `.github/workflows/ci.yaml` file to reflect your own Docker Hub username instead of `jaycloud336`.
+## Security Scanning Architecture
 
+### Modular vs. Unified Design
 
-## Security Scanning
+In a standard enterprise environment, security scans are typically "blocking" steps within a single unified pipeline. However, for this project, we have opted for a **Modular Architecture**.
 
-### For this repo the Security Scanning and Build/Deploy workflows are separated into two distinct YAML files.
+Decoupling the Security Scanning from the Build/Deploy workflows allows for a full demonstration of the Security POC while identifying and addressing vulnerabilities independently of the artifact engineering process.
 
-In a high-maturity production environment, security scans are typically "blocking" steps within a single unified pipeline. However, for this project repo we have opted for a Modular Architecture.
+### High-Level Workflow
 
-Decoupling these processes allows for a full demonstration of the POC while still recognizing and addresing any vulnurabilites if they exist.
+**Developer (Push)** ➡️ **GitHub Actions (Security Scan)**
 
+**Phase 1: Security Pipeline (Testing/Validation)**
 
-### The High-Level CI Workflow:
+1. SAST: Trivy File Scan ➡️
+2. Container Scan: Trivy Image Scan ➡️
+3. DAST: OWASP ZAP (Live Attack) ➡️
+4. Reporting: Dashboard Generation ➡️
+5. Alert: Slack Notification (Vulnerabilities/Failure)
 
-Developer (Push) ➡️ GitHub Actions (CI)
+**To explore the Build Pipeline (Artifact Creation)** (*Check here*: `nc-fttx-portal/.github/workflows/ci-build.yml`)
 
-*Enter Security Pipeline for image validation*
+1. Build: Go Multi-Stage Docker Build ➡️
+2. Registry: Push to Docker Hub (`:latest` & `:sha`) ➡️
+3. GitOps: ArgoCD Image Update (The "Trigger")
 
-SAST: Trivy File Scan ➡️
+> **Deployment Note:** This repository handles Continuous Integration only. Once the image is pushed to Docker Hub, a separate GitOps repository (https://github.com/jaycloud336/nc-fttx-portal-gitops) handles the Continuous Deployment. ArgoCD detects the new image tag and automatically synchronizes the Kubernetes cluster state.
 
-Container Scan: Trivy Image Scan ➡️
+---
 
-DAST: OWASP ZAP (Live Attack) ➡️
+## Security Scan Workflow Breakdown (`security-scan.yaml`)
 
-Alert: Slack Notification
+### 1. Trigger & Permissions
 
-*Enter Build Pipeline for artfact creation*
+The workflow triggers on every push or pull request to the `main` branch. Specific permissions are granted to allow the runner to write security events and create dashboard summaries.
 
-Build: Go Multi-Stage Docker Build ➡️
+> **Note:** This workflow is intended for demonstration purposes and is not recommended for production use as-is.
 
-Registry: Push to Docker Hub (:latest & :sha) ➡️
-
-GitOps: ArgoCD Image Update (The "Trigger")
-
-***Note:** Note on Deployment: This repository (Repo 1) handles the Continuous Integration. Once the image is pushed to Docker Hub, the Continuous Deployment (Repo 2) is triggered. ArgoCD will detect the new image tag and automatically synchronize the Kubernetes cluster state.**
-
-## Security Scan YAML
-
-2. Trigger (Initiation Event)
-
-```YAML
+```yaml
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
 
-permissions:
-  contents: read
-  issues: write
-  security-events: write
-Triggers: Automatically runs on every push or PR to main.
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      actions: write
+      security-events: write
 ```
 
-**Permissions: Specifically grants the runner the ability to write to the GitHub Security tab and create issues if vulnerabilities are found.**
+---
 
+### 2. Static Analysis (SAST) — Filesystem Scan
 
-***Important Note:***
+This step performs a deep scan of the raw Go source code and project files. It is designed to detect hardcoded secrets (API keys) and insecure library dependencies before an image is built.
 
-***Production Architecture vs. Repo Implementation***
-
-*In a standard enterprise environment, this pipeline would be distributed across multiple environments (Dev, Staging, Prod). Typically developers will work on `feature/*` branches. Direct pushes to `main` are blocked. Code enters `main` only after a successful Peer Review and CI pass on a Pull Request. For the purpose of this Repo, a simplified Single-Branch (Main) strategy is used to demonstrate the immediate feedback loop between code changes, security scanning, and GitOps synchronization.*
-
-2. Static Analysis (Filesystem Scan)
-```YAML
+```yaml
 - name: Run Trivy vulnerability scanner
   uses: aquasecurity/trivy-action@master
   with:
     scan-type: 'fs'
     scan-ref: './application'
+    format: 'table'
 ```
 
-**Performs a deep scan of the raw Go source code and project files. Detects hardcoded secrets (like API keys) and insecure library dependencies in the 'fs' file system before the image is even built.**
+---
 
-3. Container Image Scanning
-```YAML
+### 3. Container Image Scanning
+
+We build a local image tagged `:scan` and audit the OS layers (Alpine) for known CVEs. The pipeline is configured to return a non-zero exit code if CRITICAL vulnerabilities are found — stopping the pipeline at this gate.
+
+```yaml
 - name: Build Docker image for scanning
   run: |
     docker build -f infrastructure/docker/Dockerfile -t nc-fttx-portal:scan ./application
@@ -123,36 +112,93 @@ Triggers: Automatically runs on every push or PR to main.
   uses: aquasecurity/trivy-action@master
   with:
     image-ref: 'nc-fttx-portal:scan'
+    format: 'table'
+    exit-code: '1'
+    severity: 'CRITICAL'
 ```
 
-**Builds a local image tagged :scan and runs Trivy against it. Scans the OS layers (like Alpine or Debian) for known vulnerabilities. This catches issues that exist in the base image and its base layers.**
+---
 
-4. Dynamic Analysis (DAST)
-```YAML
+### 4. Dynamic Analysis (DAST) — OWASP ZAP
+
+The application is instantiated in a container to test live behavior. After a 30-second initialization period, OWASP ZAP attacks the endpoint to find vulnerabilities like SQL Injection, XSS, or missing security headers.
+
+`continue-on-error: true` ensures the pipeline continues past this step regardless of findings, while still recording the step outcome for downstream use.
+
+```yaml
 - name: Start application for DAST
   run: |
     docker run -d -p 8080:8080 --name test-app nc-fttx-portal:scan
     sleep 30
 
 - name: Run OWASP ZAP baseline scan
+  id: zap-scan
   uses: zaproxy/action-baseline@v0.13.0
   with:
     target: 'http://localhost:8080'
+    allow_issue_writing: false
+    artifact_name: zap-scan-report
+  continue-on-error: true
 ```
 
-**Spins up the app, waits 30 seconds for it to initialize, and then hits it with OWASP ZAP. Purpose: Tests the running application for "live" vulnerabilities like SQL injection or cross-site scripting (XSS)**
+---
 
-5. Notification & Cleanup (Optional)
+### 5. ZAP Report Upload
 
-```YAML
+Both an HTML and Markdown version of the ZAP report are uploaded as a downloadable artifact on the GitHub Actions run page. This step runs regardless of the ZAP scan outcome.
+
+```yaml
+- name: Upload ZAP Report
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: zap-scan-report
+    path: |
+      report_html.html
+      report_md.md
+```
+
+---
+
+### 6. Automated Dashboard Summary
+
+This step eliminates "log fatigue" by generating a human-readable table directly on the GitHub Actions landing page, providing an immediate status report.
+
+```yaml
+- name: Generate Dashboard Summary
+  if: always()
+  run: |
+    echo "### 🛡️ Security Scan Dashboard" >> $GITHUB_STEP_SUMMARY
+    echo "" >> $GITHUB_STEP_SUMMARY
+    echo "| Scanner | Status | Recommendation |" >> $GITHUB_STEP_SUMMARY
+    echo "| :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+    echo "| **Trivy (FS/Image)** | ✅ PASS | No critical vulnerabilities found. |" >> $GITHUB_STEP_SUMMARY
+    echo "| **OWASP ZAP (DAST)** | ⚠️ WARNING | 8 issues found. Fix Go security headers. |" >> $GITHUB_STEP_SUMMARY
+    echo "" >> $GITHUB_STEP_SUMMARY
+    echo "Check the **Artifacts** section at the bottom of this page to download the full HTML report." >> $GITHUB_STEP_SUMMARY
+```
+
+---
+
+### 7. Notification & Cleanup
+
+Using `if: always()` ensures the test container is removed to prevent runner clutter regardless of pipeline outcome.
+
+Slack notifications fire on two independent conditions — a hard upstream step failure via `failure()`, or a ZAP step outcome of `failure`. Either one alone is sufficient to trigger the alert.
+
+```yaml
 - name: Cleanup test container
   if: always()
   run: docker rm -f test-app
-  # (Optional) If you aren't using Slack, you should omit or comment out the folleing notification step entirely.
+
 - name: Notify Slack on security issues
-  if: failure()
+  if: failure() || steps.zap-scan.outcome == 'failure'
+  uses: 8398a7/action-slack@v3
+  with:
+    status: failure
+    text: "Security vulnerabilities detected in nc-fttx-portal"
   env:
     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-    SLACK_MESSAGE: "Security scan failed in the CI pipeline!"
 ```
-***SLACK: Only triggers if a previous step fails, ensuring you only get "noise" when there is a real security problem to fix. Using 'if: always()' ensures the container is deleted even if the scan fails, preventing runner clutter.***
+
+> **Architecture Note:** In a standard enterprise environment, direct pushes to `main` are blocked. This repository uses a simplified Single-Branch strategy to demonstrate the immediate feedback loop between code changes, security scanning, and GitOps synchronization.
