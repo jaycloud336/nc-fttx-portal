@@ -1,6 +1,6 @@
 # STAGE 1: BUILD
 # Go compiler with Alpine base
-FROM golang:1.23-alpine AS builder         
+FROM golang:1.24-alpine AS builder         
 # Set build directory
 WORKDIR /app          
 # Copy dependency files
