@@ -70,12 +70,14 @@ on:
     paths: 
       - 'application/**'
       - 'infrastructure/docker/Dockerfile'
-  pull_request:
-    branches: [main]
-    paths: ['application/**']
+  # Optional code for multi-branch environments    
+  # pull_request:
+  #   branches: [main]
+  #   paths: 
+  #     - 'application/**'
 ```
 
-Monitors the repository for changes in the `application` and `infrastructure` folders to wake up the runner. Recognizes a Pull Request for proposed code, while a push to `main` initiates the final, official Docker build.
+This stage monitors the repo for changes within the application/ tree and the infrastructure Dockerfile to trigger the runner. While optimized for direct pushes to main (for demo purposes), the workflow includes pre-configured optional commented code for Pull Requests—offering an optional safety gate for those who wish to customize for a multi-branch team environment.
 
 ---
 
