@@ -1,4 +1,4 @@
-## CI Build & Push Pipeline (GitHub Actions)
+# CI Build & Push Pipeline (GitHub Actions)
 
 The project includes a fully automated CI pipeline located in `.github/workflows/ci.yaml`. This workflow ensures that every code change is validated and containerized before being deployed to the cluster.
 
@@ -17,59 +17,51 @@ The project includes a fully automated CI pipeline located in `.github/workflows
 * GitHub Personal Access Token (PAT) with repo permissions
 * Access to the corresponding GitOps Repository
 
+---
 
-## ***Shared Credentials***
-***Note: If you have already configured your Docker Hub tokens and GitHub Secrets for the "Security Scanning" pipeline, you can skip the "Establish Secrets/Credentials" section below. These credentials are encrypted at the repository level and are automatically available to both pipelines.***
+## Shared Credentials
+
+> **Note:** If you have already configured your Docker Hub tokens and GitHub Secrets for the "Security Scanning" pipeline, you can skip the "Establish Secrets/Credentials" section below. These credentials are encrypted at the repository level and are automatically available to both pipelines.
 
 ---
 
-## ***Establish Secrets/Credentials*** **(Only if needed)**
+## Establish Secrets/Credentials (Only if needed)
 
-**Docker Hub Website**
-**Create Access Token:**
-   - Go to Account Settings > Security
-   - Click "New Access Token"
-   - Name: `github-actions-nc-fttx`
-   - Permissions: Read, Write, Delete
-   - Copy the token (save it securely)
+**Docker Hub Website — Create Access Token:**
+- Go to Account Settings > Security
+- Click "New Access Token"
+- Name: `github-actions-nc-fttx`
+- Permissions: Read, Write, Delete
+- Copy the token (save it securely)
 
 **Configure Secrets**: In the GitHub Repository, navigate to **Settings > Secrets and variables > Actions** and add the following:
 
 * `DOCKER_USERNAME`: Docker Hub ID.
-* `DOCKER_PASSWORD`: Personal Access Token (PAT) 
-*(generated from the Docker Hub account.)*
-* `PERSONAL_ACCESS_TOKEN`: A GitHub PAT with ('repo') scope to allow the runner to push changes to your GitOps repository.
+* `DOCKER_PASSWORD`: Personal Access Token (PAT) *(generated from the Docker Hub account.)*
+* `PERSONAL_ACCESS_TOKEN`: A GitHub PAT with (`repo`) scope to allow the runner to push changes to your GitOps repository.
 
-#### Important Note: **If you are cloning or forking this repo make sure to modify the **Image Name**: Update the `env:` section in the `.github/workflows/ci.yaml` file to reflect your own Docker Hub username and repository paths.
+> **Important:** If you are cloning or forking this repo, update the `env:` section in `.github/workflows/ci.yaml` to reflect your own Docker Hub username and repository paths.
+
+---
 
 ## Build & Deployment Strategy
 
-### For this repo the Security Scanning and Build/Deploy workflows are separated into two distinct YAML files.
- Typically in a production context the security scanning tools are fully 
- integrated in order to enforce strict quality gates (no pass, no build). 
- By intentially decoupling these processes, we allow for a full demonstration of the POC while still recognizing and addressing any vulnerabilities if they exist.
+For this repo the Security Scanning and Build/Deploy workflows are separated into two distinct YAML files. Typically in a production context the security scanning tools are fully integrated in order to enforce strict quality gates (no pass, no build). By intentionally decoupling these processes, we allow for a full demonstration of the POC while still recognizing and addressing any vulnerabilities if they exist.
+
+---
+
+## The High-Level CI Build Workflow
+
+![CI Build and Push Diagram](assets/Build-and-Push.png)
 
 
-## The High-Level CI Build Workflow:
+> **Note on Deployment:** This repository handles Continuous Integration. Once the image is pushed to Docker Hub and the manifest is updated, Continuous Deployment is handled by Repo 2 (GitOps). ArgoCD will detect the new image tag and automatically synchronize the Kubernetes cluster state.
 
-| Step | Action                     | Description                                           |
-| :--- | :------------------------- | :---------------------------------------------------- |
-| **1.** | WORKFLOW_INITIALIZATION    | ➡️ Monitor branches/paths to trigger automation       |
-| **2.** | ESTABLISH_ENV_VARS         | ➡️ Define global constants and repository paths       |
-| **3.** | PROVISION_RUNNER_JOB       | ➡️ Provision fresh Ubuntu VM for clean environment    |
-| **4.** | EXTRACT_IMAGE_METADATA     | ➡️ Generate unique SHA identity tags for tracking     |
-| **5.** | BUILD_IMAGE_AND_PUSH       | ➡️ Package container and upload to registry           |
-| **6.** | INTEGRATION_SMOKE_TEST     | ➡️ Verify health endpoint for image functionality     |
-| **7.** | GITOPS_REPO_CHECKOUT       | ➡️ Pull deployment repo via secure token for sync     |
-| **8.** | UPDATE_DEPLOY_MANIFEST     | ➡️ Inject new Short SHA into Kubernetes YAML files    |
-| **9.** | FINAL_COMMIT_AND_PUSH      | ➡️ Sync changes to GitOps to trigger ArgoCD rollout   |
-
-*Note on Deployment: This repository handles the Continuous Integration. Once the image is pushed to Docker Hub and the manifest is updated, the Continuous Deployment is handled by Repo 2 (GitOps). ArgoCD will detect the new image tag and automatically synchronize the Kubernetes cluster state.*
+---
 
 ## CI Build & Push YAML
 
-
-***Workflow Initialization*** 
+### Workflow Initialization
 
 ```yaml
 on:
@@ -82,21 +74,26 @@ on:
     branches: [main]
     paths: ['application/**']
 ```
-**Monitors the repository for changes in the 'application' and 'infrastructure' folders to "wake up" the runner. Recognizes a Pull Request for proposed code, while a Push to the 'main' branch initiates the final, official Docker build and security scan**
 
-***Establish Env. Variables*** 
+Monitors the repository for changes in the `application` and `infrastructure` folders to wake up the runner. Recognizes a Pull Request for proposed code, while a push to `main` initiates the final, official Docker build.
+
+---
+
+### Establish Environment Variables
 
 ```yaml
 env:
   REGISTRY: docker.io
   IMAGE_NAME: nc-fttx-portal
   GITOPS_REPO_PATH: 'nc-fttx-portal-gitops'
-  DEPLOYMENT_MANIFEST_PATH: 'manifests/deployment.yaml
+  DEPLOYMENT_MANIFEST_PATH: 'manifests/deployment.yaml'
 ```
 
-**This configuration provisions a temporary runner VM to execute the build process exclusively for non-pull request triggering events. It then utilizes a security gate to establish the login for DockerHUB***
+Defines global constants available to all steps in the workflow — registry target, image name, and GitOps repository paths.
 
-***Job Setup*** 
+---
+
+### Job Setup
 
 ```yaml
 jobs:
@@ -118,13 +115,13 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
 ```
 
-**Establishes a runner VM to test the code on every non pull trigger event request to ensure it builds correctly. It then uses a security gate to establish the login**
+Provisions a fresh Ubuntu runner, configures the Docker builder, and establishes authenticated access to Docker Hub. The login step is gated to skip on pull requests — credentials are only used when a real build and push is required.
 
+---
 
+### Extract Metadata
 
-***Extract Metadata***
-
-```YAML
+```yaml
 - name: Extract metadata
   id: meta
   uses: docker/metadata-action@v5
@@ -132,31 +129,37 @@ jobs:
     images: ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
     tags: |
       type=ref,event=branch
+      type=ref,event=pr
       type=sha,prefix=sha-
       type=raw,value=latest,enable={{is_default_branch}}
 ```
-**Generates a unique identity hash for every build. Useful for auditing code commits.**
 
-***Build Image & Push***
+Generates a unique identity tag for every build using the Git SHA. Useful for auditing code commits and ensuring every image is traceable back to a specific change.
+
+---
+
+### Build Image & Push
 
 ```yaml
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./application
-        file: ./infrastructure/docker/Dockerfile
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+- name: Build and push Docker image
+  uses: docker/build-push-action@v5
+  with:
+    context: ./application
+    file: ./infrastructure/docker/Dockerfile
+    push: ${{ github.event_name != 'pull_request' }}
+    tags: ${{ steps.meta.outputs.tags }}
+    labels: ${{ steps.meta.outputs.labels }}
+    cache-from: type=gha
+    cache-to: type=gha,mode=max
 ```
-**Builds app image and pushes it to the registry.  Looks for existing layers in cache before building from scratch**
-8
 
-***Integration Smoke Test***
+Builds the application image and pushes it to the registry. Checks for existing cached layers before building from scratch to optimize build times.
 
-```YAML
+---
+
+### Integration Smoke Test
+
+```yaml
 - name: Test container
   if: github.event_name != 'pull_request'
   run: |
@@ -166,31 +169,35 @@ jobs:
     docker stop test-container
     docker rm test-container
 ```
-**Spins up a test container to attempting to reach the health endpoint, to confirm that the application can successfully start and handle requests, preventing a broken image from reaching the registry**
 
-***Updates the Deployment Repo w/ new image***
+Spins up a test container and attempts to reach the health endpoint, confirming the application can start and handle requests. Prevents a broken image from reaching the registry.
+
+---
+
+### Update Deployment Repo with New Image
 
 ```yaml
-  update-manifest:
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
-    steps:
-    - name: Checkout GitOps repository
-      uses: actions/checkout@v4
-      with:
-        repository: jaycloud336/nc-fttx-portal-gitops
-        path: ${{ env.GITOPS_REPO_PATH }}
-        token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+update-manifest:
+  runs-on: ubuntu-latest
+  needs: build-and-push
+  if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  
+  steps:
+  - name: Checkout GitOps repository
+    uses: actions/checkout@v4
+    with:
+      repository: jaycloud336/nc-fttx-portal-gitops
+      path: ${{ env.GITOPS_REPO_PATH }}
+      token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 ```
 
-**Updates the deployment repository with the new image. It only runs if the previous build-and-push job succeeds**
+Checks out the GitOps deployment repository using a PAT token. Only runs if the previous `build-and-push` job succeeds.
 
+---
 
-***Update image tag in deployment manifest***
+### Update Image Tag in Deployment Manifest
 
-```YAML
+```yaml
 - name: Update image tag in deployment manifest
   run: |
     cd ${{ env.GITOPS_REPO_PATH }}
@@ -199,21 +206,47 @@ jobs:
     
     sed -i 's|image: .*/nc-fttx-portal:.*|image: '"$NEW_TAG"'|g' ${{ env.DEPLOYMENT_MANIFEST_PATH }}
 ```
-**Adds a "Short SHA" tag to the deployment image, to ensure ArgoCD pulls the exact tested version into the cluster.**
 
-***Commit & Push***
+Injects the Short SHA tag into the Kubernetes deployment manifest, ensuring ArgoCD pulls the exact tested version into the cluster.
+
+---
+
+### Commit & Push
 
 ```yaml
-    - name: Commit and push changes                    
-      uses: EndBug/add-and-commit@v9
-      with:
-        message: 'chore: update application image to sha-${{ github.sha }} [skip ci]' 
-        cwd: ${{ env.GITOPS_REPO_PATH }}
-        add: '${{ env.DEPLOYMENT_MANIFEST_PATH }}'
-        default_author: github_actions
+- name: Commit and push changes
+  uses: EndBug/add-and-commit@v9
+  with:
+    message: 'chore: update application image to sha-${{ github.sha }} [skip ci]'
+    cwd: ${{ env.GITOPS_REPO_PATH }}
+    add: '${{ env.DEPLOYMENT_MANIFEST_PATH }}'
+    default_author: github_actions
 ```
 
+Commits the updated manifest and pushes it to the GitOps repo. The `[skip ci]` flag prevents a recursive pipeline trigger.
+
+> **Continue to the Deployment Repo here →** https://github.com/jaycloud336/nc-fttx-portal-gitops
+
+---
+
+## Important Note: Production Architecture vs. Repo Implementation
+
+*In a standard enterprise environment, this pipeline would be distributed across multiple environments (Dev, Staging, Prod). For the purpose of this repo, a simplified Single-Branch strategy is used to demonstrate the immediate feedback loop between code changes and GitOps synchronization.*
+
 ***Final stage completes the image updates and pushes them to the deployment repo***
+
+
+## Handoff to Continuous Deployment
+
+Once the manifest commit lands in the GitOps repository, the CI pipeline's responsibility ends. The following lines are what connect the two repos:
+```yaml
+repository: jaycloud336/nc-fttx-portal-gitops
+token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+```
+
+ArgoCD monitors the GitOps repository and automatically detects the updated image tag in `manifests/deployment.yaml`. No explicit trigger is required — the manifest commit itself initiates the CD process.
+
+> **Continue to the Deployment Repo here →** https://github.com/jaycloud336/nc-fttx-portal-gitops
 
 ***Continue to the Deployment Repo here: -->***
 https://github.com/jaycloud336/nc-fttx-portal-gitops
