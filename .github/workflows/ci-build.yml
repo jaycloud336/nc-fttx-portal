@@ -62,7 +62,7 @@ jobs:
       run: |
         docker run -d -p 8080:8080 --name test-container ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
         sleep 10
-        curl -f http://localhost:8080/health || exit 1
+        curl --retry 5 --retry-delay 2 --fail http://localhost:8080/health || (docker logs test-container && exit 1)
         docker stop test-container
         docker rm test-container
 
