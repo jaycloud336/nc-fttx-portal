@@ -52,14 +52,14 @@ jobs:
         artifact_name: zap-scan-report
       continue-on-error: true
 
-    - name: Upload ZAP Report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: zap-scan-report
-        path: |
-          report_html.html
-          report_md.md
+    # - name: Upload ZAP Report
+    #   if: always()
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: zap-scan-report-html
+    #     path: |
+    #       report_html.html
+    #       report_md.md
 
     - name: Cleanup test container
       if: always()
