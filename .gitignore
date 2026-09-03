@@ -36,7 +36,7 @@ ehthumbs.db
 Thumbs.db
 
 # Docker
-.dockerignore
+#.dockerignore
 
 # Kubernetes
 kubeconfig
@@ -53,6 +53,7 @@ coverage.out
 *.log
 test-results/
 security-reports/
+ci-pipeline/
 
 # Helm
 charts/*.tgz
