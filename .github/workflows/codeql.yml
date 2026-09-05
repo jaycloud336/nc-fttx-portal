@@ -3,8 +3,12 @@ name: CodeQL
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+  # pull_request scanning is ideal for this tool: it surfaces findings inline
+  # on PRs and fails the check on critical/high before merge. Commented out
+  # here to avoid double runs in the push-to-main demo flow. Enable it if you
+  # adopt a PR-based workflow.
+  # pull_request:
+  #   branches: [main]
   schedule:
     - cron: '30 5 * * 1'   # weekly, Monday 05:30 UTC
 
