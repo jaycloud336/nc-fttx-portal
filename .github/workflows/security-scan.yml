@@ -72,20 +72,21 @@ jobs:
     - name: Generate Dashboard Summary
       if: always()
       run: |
-        # ZAP: count WARN-NEW rules from the report ZAP wrote to the workspace
-        if [ -f report_md.md ]; then
-          ZAP_WARN=$(grep -c 'WARN-NEW' report_md.md || echo 0)
+        if [ -f report_json.json ]; then
+          HIGH=$(jq '[.site[].alerts[] | select(.riskcode=="3")] | length' report_json.json)
+          MED=$(jq '[.site[].alerts[] | select(.riskcode=="2")] | length' report_json.json)
+          LOW=$(jq '[.site[].alerts[] | select(.riskcode=="1")] | length' report_json.json)
+          ZAP_SUMMARY="High: ${HIGH}, Medium: ${MED}, Low: ${LOW}"
         else
-          ZAP_WARN="N/A"
+          ZAP_SUMMARY="Report not found"
         fi
 
-        # Trivy: derive status from the image-scan step outcome
         if [ "${{ steps.trivy-image.outcome }}" = "success" ]; then
           TRIVY_STATUS="✅ PASS"
           TRIVY_NOTE="No critical vulnerabilities found."
         else
           TRIVY_STATUS="❌ FAIL"
-          TRIVY_NOTE="Critical vulnerabilities detected — see logs."
+          TRIVY_NOTE="Critical vulnerabilities detected - see logs."
         fi
 
         echo "### 🛡️ Security Scan Dashboard" >> $GITHUB_STEP_SUMMARY
@@ -93,9 +94,10 @@ jobs:
         echo "| Scanner | Status | Findings |" >> $GITHUB_STEP_SUMMARY
         echo "| :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
         echo "| **Trivy (Image)** | ${TRIVY_STATUS} | ${TRIVY_NOTE} |" >> $GITHUB_STEP_SUMMARY
-        echo "| **OWASP ZAP (DAST)** | ⚠️ WARNING | ${ZAP_WARN} new warnings — see report |" >> $GITHUB_STEP_SUMMARY
+        echo "| **OWASP ZAP (DAST)** | ⚠️ WARNING | ${ZAP_SUMMARY} |" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "Check the **Artifacts** section at the bottom of this page to download the full HTML report." >> $GITHUB_STEP_SUMMARY
+
     - name: Notify Slack on security issues
       if: failure() || steps.zap-scan.outcome == 'failure'
       uses: 8398a7/action-slack@v3
